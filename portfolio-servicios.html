@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="">
+<meta name="author" content="">
+<title>Neptune - Free Bootstrap Theme by WowThemes.net</title>
+<!-- Bootstrap Core CSS -->
+<link href="css/bootstrap.min.css" rel="stylesheet">
+<!-- Custom CSS -->
+<link href="css/theme.css" rel="stylesheet">
+<!-- Custom Fonts -->
+<link href="font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=Open+Sans:300,400,700,400italic,700italic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet" type="text/css">
+<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+<!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top">
+<!-- Navigation -->
+<nav class="navbar navbar-custom navbar-fixed-top" role="navigation">
+<div class="container">
+	<div class="navbar-header">
+		<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-main-collapse">
+		<i class="fa fa-bars"></i>
+		</button>
+		<a class="navbar-brand page-scroll" href="index.html">
+		JMANUELCALVO
+		</a>
+	</div>
+	<!-- Collect the nav links, forms, and other content for toggling -->
+	<div class="collapse navbar-collapse navbar-right navbar-main-collapse">
+		<ul class="nav navbar-nav">
+			<li>
+			<a href="index.html">Home</a>
+			</li>
+			<li>
+			<a href="portfolio-item.html">Singe Project</a>
+			</li>
+			<li>
+			<a href="page-sample.html">Page Sample</a>
+			</li>
+			<li>
+			<a href="contact.html">Hire me</a>
+			</li>
+		</ul>
+	</div>
+	<!-- /.navbar-collapse -->
+</div>
+<!-- /.container -->
+</nav>
+<!-- Intro Header -->
+<header class="intro">
+<div class="intro-body">
+	<div class="container">
+		<div class="row">
+			<div class="col-md-8 col-md-offset-2">
+				<h1 class="brand-heading">Almacenamiento CEPH</h1>
+				<p class="intro-text">
+Introduction
+This guide was originally based on Luca Dell'Oca's which has a little issue: it prepares the osds and fs on partitions in part 4 while later-on, ceph-deploy disk zap erases everything and the full disk is eventyally used as OSD. So in this guide I'm using a similar architecture, just with 3 monitors on the very same nodes as the 3 osd nodes (3 osd disks each and 1 disk with 3 journal partitions). So 4 hosts in total incl. the admin box which also has some ceph packages installed.
+
+System preparation
+Setup hostnames on each mon & osd node, e.g. on ceph1,
+
+hostname HOSTNAME
+vi /etc/hostname
+
+vi /etc/hosts
+192.168.0.254   gw.example.local gw
+192.168.0.1 ceph1.example.local ceph1
+
+hostname
+hostname --long
+route
+Fix the SMTP relay,
+
+nmap -p 25 SMTP
+vi /etc/postfix/main.cf
+
+relayhost = SMTP
+
+service postfix restart
+vi /etc/aliases
+newaliases
+date | mail -s `hostname` root
+mailq
+tail /var/log/maillog
+Fix the time setup,
+
+nmtp -sU -p 123 NTP
+vi /etc/ntp.conf
+
+server NTP
+
+systemctl restart ntpd
+systemctl enable ntpd
+ntpq -p
+date
+hwclock --systohc
+Make sure root@admin is able to SSH without a password to root@ceph1,2,3 as well as root@admin itself,
+
+whoami # root@admin
+ssh-keygen
+ssh-copy-id ceph1
+ssh-copy-id ceph2
+ssh-copy-id ceph3
+ssh-copy-id admin
+ssh ceph1
+^D
+ssh ceph2
+^D
+ssh ceph3
+^D
+ssh admin
+^D
+Make sure ClusterIt is configured,
+
+vi /etc/cluster.conf
+
+LUMP:cepha
+ceph
+cephadmin
+
+GROUP:cephadmin
+admin
+
+GROUP:ceph
+ceph1
+ceph2
+ceph3
+
+dsh -e -g cepha echo test
+Check on all the nodes (incl. admin),
+
+dsh -e -g cepha cat /etc/hosts
+
+dsh -e -g cepha grep ^relayhost /etc/postfix/main.cf
+
+dsh -e -g cepha ntpq -p
+dsh -e -g cepha date
+
+dsh -e -g cepha ps aux | grep vmtoolsd
+
+dsh -e -g cepha ping -c1 ceph1
+dsh -e -g cepha ping -c1 ceph2
+dsh -e -g cepha ping -c1 ceph3
+dsh -e -g cepha ping -c1 admin
+Fix on all the nodes (incl. admin),
+
+dsh -e -g cepha systemctl stop firewalld
+dsh -e -g cepha systemctl disable firewalld
+
+dsh -e -g cepha setenforce 0
+dsh -e -g cepha "cat <<-EOF > /etc/selinux/config
+SELINUX=permissive
+SELINUXTYPE=targeted
+EOF
+"
+Create ceph user on the admin box and all nodes,
+
+dsh -e -g cepha useradd -G wheel -m ceph
+dsh -e -g cepha rpm -q sudo ksh
+dsh -e -g cepha ksh print "\n%wheel ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+vi /etc/sudoers
+
+Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+Make sure ceph@admin is able to SSH without a password to ceph@ceph1,2,3 as well as ceph@admin itself,
+
+su - ceph
+ssh-keygen
+ssh-copy-id ceph@ceph1
+ssh-copy-id ceph@ceph2
+ssh-copy-id ceph@ceph3
+ssh-copy-id ceph@admin
+ssh ceph1
+^D
+ssh ceph2
+^D
+ssh ceph3
+^D
+ssh admin
+^D
+Installing Ceph
+Check the name of the last Ceph stable release or search for RCs. As of Jul 2017 there's Luminous RC. Assuming RHEL7/CentOS7 (el7).
+
+Note. to force the use of the release of your choosing for ceph-* packages, you need to manually copy the repo to all the nodes. Otherwise you might get Jewel (as of Jul 2017) whatever you used as repo for ceph-deploy.
+
+As root@admin then manually replicate the repo on all the nodes so ceph-deploy uses it!
+
+sudo vi /etc/yum.repos.d/ceph.repo
+
+[Ceph]
+name=Ceph packages for $basearch
+baseurl=http://download.ceph.com/rpm-luminous/el7/$basearch
+enabled=1
+gpgcheck=1
+type=rpm-md
+gpgkey=https://download.ceph.com/keys/release.asc
+
+[Ceph-noarch]
+name=Ceph noarch packages
+baseurl=http://download.ceph.com/rpm-luminous/el7/noarch
+enabled=1
+gpgcheck=1
+type=rpm-md
+gpgkey=https://download.ceph.com/keys/release.asc
+
+[ceph-source]
+name=Ceph source packages
+baseurl=http://download.ceph.com/rpm-luminous/el7/SRPMS
+enabled=1
+gpgcheck=1
+type=rpm-md
+gpgkey=https://download.ceph.com/keys/release.asc
+
+sudo -i pcp -e -g ceph /etc/yum.repos.d/ceph.repo /etc/yum.repos.d/ceph.repo 
+
+sudo yum clean all
+sudo yum install ceph-deploy
+Creating the cluster
+as ceph@admin
+
+Prepare the monitor nodes,
+
+ceph-deploy new ceph1 ceph2 ceph3
+ls -lhF ~/ceph.conf
+Setup your service and cluster network as well as OSD pool config,
+
+vi ~/ceph.conf
+
+public network = 192.168.0.0/24
+cluster network = 192.168.0.0/24
+
+osd pool default size = 2 # Write an object 2 times
+osd pool default min size = 1 # Allow writing 1 copy in a degraded state
+
+osd crush chooseleaf type = 1
+and populate the cluster config INCLUDING the admin into /etc/ceph/ceph.conf,
+
+ceph-deploy config push ceph1 ceph2 ceph3 admin
+#nothing to override yet right?
+#ceph-deploy --overwrite-conf config push ceph1 ceph2 ceph3 admin
+Install Ceph packages across the nodes
+as ceph@admin
+
+Try with a single node, then with the rest of the cluster incl. admin box,
+
+ceph-deploy install ceph1
+ceph-deploy install ceph2 ceph3 admin
+Note. in case you get that warning on the admin node,
+
+[admin][WARNIN] warning: /etc/yum.repos.d/ceph.repo created as /etc/yum.repos.d/ceph.repo.rpmnew
+[admin][WARNIN] ensuring that /etc/yum.repos.d/ceph.repo contains a high priority
+review and eventually fix,
+
+diff -bu /etc/yum.repos.d/ceph.repo /etc/yum.repos.d/ceph.repo.rpmnew
+sudo mv /etc/yum.repos.d/ceph.repo.rpmnew /etc/yum.repos.d/ceph.repo
+then re-run ceph-deploy install.
+
+Everything's fine ?
+
+sudo -i dsh -e -g cepha ceph --version
+Setting up Ceph Monitors
+as ceph@admin
+
+Deploy monitors,
+
+grep ^mon_initial_members ~/ceph.conf
+ceph-deploy mon create-initial
+Make the keyring work (against monitors only?),
+
+ceph-deploy gatherkeys ceph1 ceph2 ceph3
+sudo chmod +r /etc/ceph/ceph.client.admin.keyring
+Push configuration and client.admin key to a remote host.
+
+ceph-deploy admin ceph1 ceph2 ceph3 admin
+If you need to add a monitor, you now got the link.
+
+Calculating PGs
+Have fun with the logic. I don't get it. But it seems 30 PGs per OSD is maximum while the values for pg num and pgp num should be a power of two. Also increasing the number of PGs makes your cluster more easy to scale out in terms of OSDs. So put simple, I 30 x <number of your OSDs> to find the maximum and take the power of two equal or below it.
+
+2^0     1
+2^1     2
+2^2     4
+2^3     8
+2^4     16
+2^5     32
+2^6     64
+2^7     128
+2^8     256
+2^9     512
+2^10    1024
+Refs (I'm tired).
+
+http://ceph.com/pgcalc/
+https://stackoverflow.com/questions/40771273/ceph-too-many-pgs-per-osd
+https://stackoverflow.com/questions/39589696/ceph-too-many-pgs-per-osd-all-you-need-to-know
+https://www.sebastien-han.fr/blog/2015/06/16/ceph-is-complaining-too-many-pgs/
+https://www.google.fr/search?q=too+many+pgs+per+osd&ie=utf-8&oe=utf-8&client=firefox-b-ab&gfe_rd=cr&ei=BHFjWZftDsTS8Aftp4zIBA
+? https://swamireddy.wordpress.com/2017/03/28/ceph-health-warn-too-many-pgs-per-osd/
+docs.ceph.com/docs/kraken/rados/configuration/ceph-conf/
+http://docs.ceph.com/docs/hammer/man/8/ceph-conf/
+https://www.sebastien-han.fr/blog/2012/10/22/ceph-inject-configuration-without-restart/
+https://access.redhat.com/documentation/en-US/Red_Hat_Ceph_Storage/1.2.3/html-single/Ceph_Configuration_Guide/index.html
+http://cephnotes.ksperis.com/blog/2015/02/02/crushmap-example-of-a-hierarchical-cluster-map
+https://access.redhat.com/documentation/en-us/red_hat_ceph_storage/2/html/storage_strategies_guide/placement_groups_pgs
+https://ekuric.wordpress.com/2016/02/09/increase-number-of-pgpgp-for-ceph-cluster-ceph-error-too-few-pgs-per-osd/
+as ceph@admin
+
+Proceed (push also to the admin machine into /etc/ceph/ceph.conf),
+
+vi ~/ceph.conf
+
+osd pool default pg num = 256
+osd pool default pgp num =  256
+
+ceph-deploy --overwrite-conf config push ceph1 ceph2 ceph3 admin
+OSD disk setup
+as root@admin
+
+Assuming sdb1,2,3 for journals and sdc,d,e as osd disks on every node,
+
+dsh -e -g ceph "parted /dev/sda -ms print devices | grep ^/dev/s"
+dsh -e -g ceph parted -ms /dev/sdb mklabel gpt mkpart primary 0% 33% mkpart primary 34% 66% mkpart primary 67% 100%
+dsh -e -g ceph parted -ms /dev/sdb print
+dsh -e -g ceph lsblk --fs
+as ceph@admin
+
+CAUTION: disk zap is wiping everything out,
+
+ceph-deploy disk list ceph1
+ceph-deploy disk list ceph2
+ceph-deploy disk list ceph3
+
+ceph-deploy disk zap ceph1:sdc ceph1:sdd ceph1:sde
+ceph-deploy disk zap ceph2:sdc ceph2:sdd ceph2:sde
+ceph-deploy disk zap ceph3:sdc ceph3:sdd ceph3:sde
+
+ceph-deploy osd create ceph1:sdc:/dev/sdb1 ceph1:sdd:/dev/sdb2 ceph1:sde:/dev/sdb3
+ceph-deploy osd create ceph2:sdc:/dev/sdb1 ceph2:sdd:/dev/sdb2 ceph2:sde:/dev/sdb3
+ceph-deploy osd create ceph3:sdc:/dev/sdb1 ceph3:sdd:/dev/sdb2 ceph3:sde:/dev/sdb3
+
+ceph osd tree
+If you need to add osds you now got the link.
+
+Operations
+Operating Ceph
+
+Troubleshooting
+Note. if you need to start over and install an older release,
+
+ceph-deploy purge ceph1 ceph2 ceph3 admin
+ceph-deploy purgedata ceph1 ceph2 ceph3 admin
+ceph-deploy forgetkeys
+sudo rpm -e ceph-deploy
+rm -f $HOME/ceph*
+Note. to avoid this kind of warnings that ultimately bring an error so ceph-deploy install fails,
+
+[admin][WARNIN]            Requires: python-rados = 1:0.80.7
+[admin][WARNIN]            Installed: 1:python-rados-0.94.5-1.el7.x86_64 (@rhel73)
+
+[admin][WARNIN]            Requires: librbd1 = 1:0.80.7
+[admin][WARNIN]            Installed: 1:librbd1-0.94.5-1.el7.x86_64 (@rhel73)
+[admin][WARNIN]            Available: 1:librbd1-0.80.7-0.8.el7.x86_64 (epel)
+
+[admin][WARNIN]            Requires: librados2 = 1:0.80.7
+[admin][WARNIN]            Installed: 1:librados2-0.94.5-1.el7.x86_64 (@rhel73)
+[admin][WARNIN]            Available: 1:librados2-0.80.7-0.8.el7.x86_64 (epel)
+
+[admin][WARNIN]            Requires: python-rbd = 1:0.80.7
+[admin][WARNIN]            Installed: 1:python-rbd-0.94.5-1.el7.x86_64 (@rhel73)
+I switched from a used RHEL to a CentOS (maybe the extra redhat repo set is required and already included within CentOS?).
+
+References
+http://docs.ceph.com/docs/master/start/quick-ceph-deploy/
+docs.ceph.com/docs/master/
+https://www.virtualtothecore.com/en/adventures-ceph-storage-part-1-introduction/
+http://dachary.org/
+Trash & Left-overs
+This manual shit isn't needed as ceph-deploy does it,
+
+#dsh -e -g ceph dd if=/dev/zero of=/dev/$disk bs=1024k count=2
+for disk in sdc sdd sde; do
+    dsh -e -g ceph parted -ms /dev/$disk mklabel gpt mkpart primary xfs 0% 100%
+    dsh -e -g ceph parted -ms /dev/$disk print
+done; unset disk
+
+for disk in sdc sdd sde; do
+    dsh -e -g ceph mkfs.xfs -q /dev/${disk}1
+done; unset disk
+
+				</p>
+				<a href="#single-project" class="btn btn-circle page-scroll">
+				<i class="fa fa-angle-double-down animated"></i>
+				</a>
+			</div>
+		</div>
+	</div>
+</div>
+</header>
+<!-- Project Details Section -->
+<section id="single-project">
+<div class="container content-section text-center">
+	<div class="row">
+		<h2>STEPS OF PROJECT</h2>
+		<div class="col-lg-8 col-lg-offset-2">
+			<p>
+				Describe project here, add some images etc. Praesent ac dignissim diam. Aliquam lobortis elit et sapien eleifend, at sollicitudin metus elementum. Morbi imperdiet id ipsum at tristique. Nam suscipit tristique sem, <a href="#">quis</a> laoreem.
+			</p>
+			<p>
+				<a href="#" class="btnghost"><i class="fa fa-envelope"></i> Request similar project</a> 
+				<i style="font-size:12px;margin-right:3px;"> or </i> 
+				<a href="index.html#portfolio" class="btnghost"><i class="fa fa-camera"></i> Back to projects gallery</a>
+			</p>
+		</div>
+	</div>
+</div>
+</section>
+<!-- Footer -->
+<footer>
+<div class="container text-center">
+	<p class="credits">
+		Copyright &copy; Your Website 2015<br/>
+		"Aries" Template by WowThemes.net
+	</p>
+</div>
+</footer>
+<!-- jQuery -->
+<script src="js/jquery.js"></script>
+<!-- Bootstrap Core JavaScript -->
+<script src="js/bootstrap.min.js"></script>
+<!-- Plugin JavaScript -->
+<script src="js/jquery.easing.min.js"></script>
+<!-- Custom Theme JavaScript -->
+<script src="js/theme.js"></script>
+</body>
+</html>
