@@ -2,11 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="">
 <meta name="author" content="">
-<title>Neptune - Free Bootstrap Theme by WowThemes.net</title>
+<title>ARIES - Free Bootstrap Theme by WowThemes.net</title>
 <!-- Bootstrap Core CSS -->
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <!-- Custom CSS -->
@@ -31,23 +30,22 @@
 		<i class="fa fa-bars"></i>
 		</button>
 		<a class="navbar-brand page-scroll" href="index.html">
-		JMANUELCALVO
-		</a>
+		ARIES </a>
 	</div>
 	<!-- Collect the nav links, forms, and other content for toggling -->
 	<div class="collapse navbar-collapse navbar-right navbar-main-collapse">
 		<ul class="nav navbar-nav">
 			<li>
-			<a href="index.html">INICIO</a>
+			<a href="index.html">Home</a>
 			</li>
 			<li>
-			<a href="portfolio-servicios.html">SERVICIOS</a>
+			<a href="portfolio-item.html">Singe Project</a>
 			</li>
 			<li>
-			<a href="pag-servios.html">PRODUCTOS</a>
+			<a href="page-sample.html">Page Sample</a>
 			</li>
 			<li>
-			<a href="contact.html">CONTACTENOS</a>
+			<a href="contact.html">Hire me</a>
 			</li>
 		</ul>
 	</div>
@@ -61,11 +59,11 @@
 	<div class="container">
 		<div class="row">
 			<div class="col-md-8 col-md-offset-2">
-				<h1 class="brand-heading">Soluciones a la medida</h1>
+				<h1 class="brand-heading">Get in Touch</h1>
 				<p class="intro-text">
-					Consultoria,Entrenamiento, Servicios
+					The contact form is Workin'!
 				</p>
-				<a href="#single-project" class="btn btn-circle page-scroll">
+				<a href="#contact" class="btn btn-circle page-scroll">
 				<i class="fa fa-angle-double-down animated"></i>
 				</a>
 			</div>
@@ -73,22 +71,25 @@
 	</div>
 </div>
 </header>
-<!-- Project Details Section -->
-<section id="single-project">
-<div class="container content-section text-center">
+<!-- Contact Section -->
+<section id="contact">
+<div class="container content-section">
 	<div class="row">
-		<h2>STEPS OF PROJECT</h2>
 		<div class="col-lg-8 col-lg-offset-2">
-			<p>
-En la actualidad las empresas cuentan con necesidades tecnológicas las cuales pueden ir desde una pagina web y correo electrónico para contar con presencia en Internet hasta soluciones de Inteligencia de Negocios. Contando con mas de 18 años de experiencia y conociendo diferentes segmentos de mercado, contamos con productos y soluciones que se ajustan a tus necesidades de negocio y presupuesto
-
-Dele un vistazo a nuestros productos y servicio y no dude en contactarnos para tener el gusto de apoyarlo 
-			</p>
-			<p>
-				<a href="#" class="btnghost"><i class="fa fa-envelope"></i> Request similar project</a> 
-				<i style="font-size:12px;margin-right:3px;"> or </i> 
-				<a href="index.html#portfolio" class="btnghost"><i class="fa fa-camera"></i> Back to projects gallery</a>
-			</p>
+			<div class="done">
+				<div class="alert alert-success">
+					<button type="button" class="close" data-dismiss="alert">×</button>
+					Your message has been sent. Thank you!
+				</div>
+			</div>
+			<form method="post" action="contact.php" id="contactform">
+				<div class="form">
+					<input type="text" name="name" placeholder="Your Name *">
+					<input type="text" name="email" placeholder="Your E-mail Address *">
+					<textarea name="comment" rows="7" placeholder="Type your Message *"></textarea>
+					<input type="submit" id="submit" class="clearfix btn" value="Send">
+				</div>
+			</form>
 		</div>
 	</div>
 </div>
@@ -108,6 +109,8 @@ Dele un vistazo a nuestros productos y servicio y no dude en contactarnos para t
 <script src="js/bootstrap.min.js"></script>
 <!-- Plugin JavaScript -->
 <script src="js/jquery.easing.min.js"></script>
+<!-- Contact JavaScript -->
+<script src="js/validate.js"></script>
 <!-- Custom Theme JavaScript -->
 <script src="js/theme.js"></script>
 </body>
